@@ -12,25 +12,80 @@ from layers import Conv, LearnedGroupConv
 
 __all__ = ['CondenseNet']
 
+class DWConv(nn.Sequential):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 stride=1, padding=0, groups=1):
+        super(DWConv, self).__init__()
+        # self.add_module('norm', nn.BatchNorm2d(in_channels))
+        # self.add_module('relu', nn.ReLU(inplace=True))
+        self.add_module('conv-d', nn.Conv2d(in_channels, in_channels,
+                                            kernel_size=kernel_size,
+                                            stride=stride,
+                                            padding=padding, bias=False,
+                                            groups=in_channels))
+        #  self.add_module('norm', nn.BatchNorm2d(in_channels))
+        #  self.add_module('relu', nn.ReLU(inplace=True))
+        self.add_module('conv-p', nn.Conv2d(in_channels, out_channels,
+                                            kernel_size=1,
+                                            stride=1,
+                                            padding=0, bias=False))
+
+class GroupConv(nn.Sequential):
+    def __init__(self, in_channels, out_channels, kernel_size,
+                 stride=1, padding=0, groups=1):
+        super(GroupConv, self).__init__()
+        # self.add_module('norm', nn.BatchNorm2d(in_channels))
+        # self.add_module('relu', nn.ReLU(inplace=True))
+        self.add_module('conv', nn.Conv2d(in_channels, out_channels,
+                                          kernel_size=kernel_size,
+                                          stride=stride,
+                                          padding=padding, bias=False,
+                                          groups=groups))
 
 class _DenseLayer(nn.Module):
     def __init__(self, in_channels, growth_rate, args):
         super(_DenseLayer, self).__init__()
-        self.group_1x1 = args.group_1x1
-        self.group_3x3 = args.group_3x3
+
+        self.convs = []
+
+        dwc_count = 5
+        gc_count = 2
+
+        cur_channels = in_channels
+        out_channel = args.bottleneck * growth_rate
+        last_channel = growth_rate
+
+        # 5
+        for i in range(dwc_count):
+            dwc = DWConv(cur_channels, out_channel, kernel_size=3, padding=1, groups=args.num_groups)
+            self.convs.append(dwc)
+            cur_channels = out_channel
+        # 2
+        for i in range(gc_count):
+            # Last
+            if i==gc_count-1: 
+                gc = GroupConv(in_channels, last_channel, kernel_size=3, padding=1, groups=args.num_groups)
+            else
+                gc = GroupConv(in_channels, out_channel, kernel_size=3, padding=1, groups=args.num_groups)
+            self.convs.append(gc)
+            cur_channels = out_channel
+        
+        #self.group_1x1 = args.group_1x1
+        #self.group_3x3 = args.group_3x3
+
         ### 1x1 conv i --> b*k
-        self.conv_1 = LearnedGroupConv(in_channels, args.bottleneck * growth_rate,
-                                       kernel_size=1, groups=self.group_1x1,
-                                       condense_factor=args.condense_factor,
-                                       dropout_rate=args.dropout_rate)
+        #self.conv_1 = LearnedGroupConv(in_channels, args.bottleneck * growth_rate,
+        #                               kernel_size=1, groups=self.group_1x1,
+        #                               condense_factor=args.condense_factor,
+        #                               dropout_rate=args.dropout_rate)
         ### 3x3 conv b*k --> k
-        self.conv_2 = Conv(args.bottleneck * growth_rate, growth_rate,
-                           kernel_size=3, padding=1, groups=self.group_3x3)
+        #self.conv_2 = Conv(args.bottleneck * growth_rate, growth_rate,
+        #                   kernel_size=3, padding=1, groups=self.group_3x3)
 
     def forward(self, x):
         x_ = x
-        x = self.conv_1(x)
-        x = self.conv_2(x)
+        for conv in self.convs:
+            x_ = conv(x_)
         return torch.cat([x_, x], 1)
 
 
