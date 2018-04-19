@@ -58,6 +58,7 @@ parser.add_argument('--group-1x1', type=int, metavar='G', default=4,
                     help='1x1 group convolution (default: 4)')
 parser.add_argument('--group-3x3', type=int, metavar='G', default=4,
                     help='3x3 group convolution (default: 4)')
+parser.add_argument('--num-groups', type=int, default=4)
 parser.add_argument('--condense-factor', type=int, metavar='C', default=4,
                     help='condense factor (default: 4)')
 parser.add_argument('--growth', type=str, metavar='GROWTH RATE',

@@ -9,6 +9,7 @@ from torch.autograd import Variable
 from functools import reduce
 import operator
 from layers import LearnedGroupConv, CondensingLinear, CondensingConv, Conv
+#from models.condensenet import _DenseLayer
 
 
 count_ops = 0
@@ -110,10 +111,13 @@ def measure_layer(layer, x):
         bias_ops = layer.bias.numel()
         delta_ops = x.size()[0] * (weight_ops + bias_ops)
         delta_params = get_layer_param(layer)
-
+    
     ### ops_nothing
     elif type_name in ['BatchNorm2d', 'Dropout2d', 'DropChannel', 'Dropout']:
         delta_params = get_layer_param(layer)
+
+    elif type_name in ["GroupConv", 'DWConv']:
+        print(type_name)
 
     ### unknown layer type
     else:
