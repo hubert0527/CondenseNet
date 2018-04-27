@@ -76,7 +76,7 @@ class _DenseLayer(nn.Module):
         self.b1 = BatchNorm(in_channels)
         self.c1 = Conv(in_channels, c1_out_channels, kernel_size=3, padding=1, groups=args.num_groups)
         self.b2 = BatchNormRelu(c1_out_channels)
-        self.c2 = DWConv(c1_out_channels, c2_out_channels, kernel_size=3, padding=1, groups=args.num_groups)
+        self.c2 = GroupConv(c1_out_channels, c2_out_channels, kernel_size=3, padding=1, groups=args.num_groups)
         
     def forward(self, x):
         x_ = x
